@@ -2,25 +2,30 @@
 # Grab the most popular wordpress plugins, unpack them and look for dangerous code use
 
 import argparse, os, sys, re, requests, subprocess
+from os import listdir
+from os.path import isdir, join
 from bs4 import BeautifulSoup as bs
 
 # Defaults
 plugindir = "https://wordpress.org/plugins/browse/popular/"
-outputdir = "plugins";
+outputdir = "plugins"
+logfile = "zeropress.log"
 
+# Loop over all plugins on the plugin directory site
 def scrape_plugindir(plugindir):
   print "[I] Getting " + plugindir
   r = requests.get(plugindir)
   soup = bs( r.text )
   links = soup.select("div.plugin-card a.plugin-icon")
   rs = soup.select("a.next.page-numbers")
+  sys.exit
   if( len(rs) == 0 ):
     nextpage = ''
   else:
     nextpage = soup.select("a.next.page-numbers")[0]['href']
   
   # Fix non-absolute links
-  if not re.match( '^http', nextpage ):
+  if not nextpage == '' and re.match( '^http', nextpage ):
     nextpage = '/'.join(plugindir.split('/')[:3]) + nextpage
   
   # Loop over links
@@ -30,6 +35,9 @@ def scrape_plugindir(plugindir):
   # Get the next page
   if( nextpage != '' ):
     scrape_plugindir( nextpage )
+  
+  print "[I] All done! Looks like we got all the plugin pages."
+
 
 def get_latest_plugin_version(pluginpage):
   global args
@@ -49,36 +57,63 @@ def get_latest_plugin_version(pluginpage):
   if not os.path.exists( zippath ):
     print "[-] Downloading " + downloadurl + " to " + path 
     r = requests.get(downloadurl)
-    z = open( path + '/' + filename, 'w' )
+    z = open( zippath, 'w' )
     z.write( r.content )
     z.close()
-    unpack_and_analyse( path + '/' + filename )
+    unpack_zip( zippath )
   else:
     print "[-] Zip already present in " + path
-    analyse_code( path )
-
-def unpack_and_analyse( zippath ):
-  unpack_zip( zippath )
-  analyse_code( '/'.join(zippath.split('/')[:-1]) )
+  
+  analyse_code( path )
 
 def unpack_zip( zippath ):
   dest = '/'.join(zippath.split('/')[:-1])
   print "[-] Unpacking " + zippath
   subprocess.check_output(['unzip', '-d', dest, zippath])
 
+def analyse_all_plugins(plugindir):
+  # List dirs in plugindir
+  plugindirs = [ d for d in listdir(plugindir) if isdir(join(plugindir,d)) ]
+  for d in plugindirs:
+    versions = [v for v in listdir(join(plugindir,d)) if isdir(join(plugindir,d,v))]
+    
+    # Just look at the most recent version of a plugin
+    versions = sorted( versions, reverse=True )
+    for v in versions:
+      analyse_code( join(plugindir,d,v) )
+      break
+
 def analyse_code( codedir ):
  print "[-] Analysing code in " + codedir 
- code_search( codedir, '"\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\)("' )
- code_search( codedir, '"\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["' )
+ code_search( 'grep -rHnI "\W\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
+ code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\)\W" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
+ code_search( 'grep -rHnI "\(curl_exec\|fsockopen\|stream_context_create\)(" '+codedir, "SSRF" )
+ code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\)("', "LFI" )
+ code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
 
-def code_search( codedir, regexp ):
- return subprocess.check_output( ['grep', '-irHnI', regexp, codedir] )
+def code_search( cmd, genre="" ):
+  global args
+  out = ''
+  try:
+    out = subprocess.check_output( cmd + " | sed 's/^/[!]["+genre+"] /'", shell=True )
+  except subprocess.CalledProcessError as e:
+    pass
+  if( out.strip() != '' ):
+    print out
+    f = open( args.logfile, "a" )
+    f.write( out )
+    f.close()
+  return out
   
 
 parser = argparse.ArgumentParser(description="Grab the most popular wordpress plugins, unpack them and look for dangerous code use")
-parser.add_argument("-p", "--pages", help="Total number of pages from the plugin directory to scrape")
 parser.add_argument("-d", "--plugindir", help="Base URL for scraping plugins", default=plugindir)
 parser.add_argument("-o", "--outputdir", help="Output dir for saving downloaded files", default=outputdir)
+parser.add_argument("-l", "--logfile", help="Log file to write to", default=logfile)
+parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 args = parser.parse_args()
 
-scrape_plugindir( args.plugindir )
+if args.nodownload:
+  analyse_all_plugins(args.outputdir)
+else:
+  scrape_plugindir( args.plugindir )
