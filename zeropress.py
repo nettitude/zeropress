@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Grab the most popular wordpress plugins, unpack them and look for dangerous code use
 
-import argparse, os, sys, re, requests, subprocess
+import argparse, os, sys, re, requests, subprocess, datetime
 from os import listdir
 from os.path import isdir, join
 from bs4 import BeautifulSoup as bs
@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup as bs
 # Defaults
 plugindir = "https://wordpress.org/plugins/browse/popular/"
 outputdir = "plugins"
-logfile = "zeropress.log"
+logfile = "zeropress_"+str( datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S") )+".log"
 
 # Loop over all plugins on the plugin directory site
 def scrape_plugindir(plugindir):
@@ -25,7 +25,7 @@ def scrape_plugindir(plugindir):
     nextpage = soup.select("a.next.page-numbers")[0]['href']
   
   # Fix non-absolute links
-  if not nextpage == '' and re.match( '^http', nextpage ):
+  if nextpage != '' and not re.match( '^http', nextpage ):
     nextpage = '/'.join(plugindir.split('/')[:3]) + nextpage
   
   # Loop over links
@@ -41,7 +41,7 @@ def scrape_plugindir(plugindir):
 
 def get_latest_plugin_version(pluginpage):
   global args
-  print "[-] Getting plugin page: " + pluginpage
+  print "[I] Getting plugin page: " + pluginpage
   shortname = re.findall('([^\/]+)\/?$',pluginpage)[0]
   r = requests.get(pluginpage)
   soup = bs( r.text )
@@ -55,23 +55,24 @@ def get_latest_plugin_version(pluginpage):
     os.makedirs( path )
  
   if not os.path.exists( zippath ):
-    print "[-] Downloading " + downloadurl + " to " + path 
+    print "[I] Downloading " + downloadurl + " to " + path 
     r = requests.get(downloadurl)
     z = open( zippath, 'w' )
     z.write( r.content )
     z.close()
     unpack_zip( zippath )
   else:
-    print "[-] Zip already present in " + path
+    print "[.] Zip already present in " + path
   
   analyse_code( path )
 
 def unpack_zip( zippath ):
   dest = '/'.join(zippath.split('/')[:-1])
-  print "[-] Unpacking " + zippath
+  print "[.] Unpacking " + zippath
   subprocess.check_output(['unzip', '-d', dest, zippath])
 
 def analyse_all_plugins(plugindir):
+  print "[.] Analysing newest version of all plugins currently in " + plugindir
   # List dirs in plugindir
   plugindirs = [ d for d in listdir(plugindir) if isdir(join(plugindir,d)) ]
   for d in plugindirs:
@@ -82,12 +83,14 @@ def analyse_all_plugins(plugindir):
     for v in versions:
       analyse_code( join(plugindir,d,v) )
       break
+  print "[I] Current version of all plugins available analysed"
 
 def analyse_code( codedir ):
- print "[-] Analysing code in " + codedir 
- code_search( 'grep -rHnI "\W\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
- code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\)\W" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
+ print "[.] Analysing code in " + codedir 
+ code_search( 'grep -rHnI "[^\._a-z]\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
+ code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\)\W" '+codedir+' | grep "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
  code_search( 'grep -rHnI "\(curl_exec\|fsockopen\|stream_context_create\)(" '+codedir, "SSRF" )
+ code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\[" '+codedir+' | grep "unserialize("', "OBJI" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\)("', "LFI" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
 
@@ -112,6 +115,9 @@ parser.add_argument("-o", "--outputdir", help="Output dir for saving downloaded 
 parser.add_argument("-l", "--logfile", help="Log file to write to", default=logfile)
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 args = parser.parse_args()
+
+print "[I] Logging to " + args.logfile
+sys.exit
 
 if args.nodownload:
   analyse_all_plugins(args.outputdir)
