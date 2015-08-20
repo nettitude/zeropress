@@ -11,9 +11,12 @@ plugindir = "https://wordpress.org/plugins/browse/popular/"
 outputdir = "plugins"
 logfile = "zeropress_"+str( datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S") )+".log"
 
+def pinfo(info):
+  print "\033[92m[I] " + info + "\033[0m"
+
 # Loop over all plugins on the plugin directory site
 def scrape_plugindir(plugindir):
-  print "[I] Getting " + plugindir
+  pinfo( "Getting " + plugindir )
   r = requests.get(plugindir)
   soup = bs( r.text )
   links = soup.select("div.plugin-card a.plugin-icon")
@@ -36,12 +39,12 @@ def scrape_plugindir(plugindir):
   if( nextpage != '' ):
     scrape_plugindir( nextpage )
   
-  print "[I] All done! Looks like we got all the plugin pages."
+  pinfo( "All done! Looks like we got all the plugin pages." )
 
 
 def get_latest_plugin_version(pluginpage):
   global args
-  print "[I] Getting plugin page: " + pluginpage
+  pinfo( "Getting plugin page: " + pluginpage )
   shortname = re.findall('([^\/]+)\/?$',pluginpage)[0]
   r = requests.get(pluginpage)
   soup = bs( r.text )
@@ -55,7 +58,7 @@ def get_latest_plugin_version(pluginpage):
     os.makedirs( path )
  
   if not os.path.exists( zippath ):
-    print "[I] Downloading " + downloadurl + " to " + path 
+    pinfo( "Downloading " + downloadurl + " to " + path )
     r = requests.get(downloadurl)
     z = open( zippath, 'w' )
     z.write( r.content )
@@ -83,7 +86,7 @@ def analyse_all_plugins(plugindir):
     for v in versions:
       analyse_code( join(plugindir,d,v) )
       break
-  print "[I] Current version of all plugins available analysed"
+  pinfo( "Current version of all plugins available analysed" )
 
 def analyse_code( codedir ):
  print "[.] Analysing code in " + codedir 
@@ -102,10 +105,11 @@ def code_search( cmd, genre="" ):
   except subprocess.CalledProcessError as e:
     pass
   if( out.strip() != '' ):
-    print out
     f = open( args.logfile, "a" )
     f.write( out )
     f.close()
+    out = re.sub( "(\[!\]\[[A-Z]+\])(.+[0-9]+:)(.*)$", "\033[91m\g<1>\033[0m\g<2>\033[93m\g<3>\033[0m", out, 0, re.M )
+    print out
   return out
   
 
@@ -116,7 +120,7 @@ parser.add_argument("-l", "--logfile", help="Log file to write to", default=logf
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 args = parser.parse_args()
 
-print "[I] Logging to " + args.logfile
+pinfo( "Logging to " + args.logfile )
 sys.exit
 
 if args.nodownload:
