@@ -40,6 +40,7 @@ def scrape_plugindir(plugindir):
     scrape_plugindir( nextpage )
   
   pinfo( "All done! Looks like we got all the plugin pages." )
+  sys.exit
 
 
 def get_latest_plugin_version(pluginpage):
@@ -72,7 +73,7 @@ def get_latest_plugin_version(pluginpage):
 def unpack_zip( zippath ):
   dest = '/'.join(zippath.split('/')[:-1])
   print "[.] Unpacking " + zippath
-  subprocess.check_output(['unzip', '-d', dest, zippath])
+  subprocess.check_output(['unzip', '-o', '-d', dest, zippath])
 
 def analyse_all_plugins(plugindir):
   print "[.] Analysing newest version of all plugins currently in " + plugindir
@@ -92,7 +93,8 @@ def analyse_code( codedir ):
  print "[.] Analysing code in " + codedir 
  code_search( 'grep -rHnI "[^\._a-z]\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
  code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\)\W" '+codedir+' | grep "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
- code_search( 'grep -rHnI "\(curl_exec\|fsockopen\|stream_context_create\)(" '+codedir, "SSRF" )
+ code_search( 'grep -rHnI "\(curl_init\|fsockopen\|stream_context_create\)(" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
+ code_search( 'grep -rHnI "CURLOPT_URL" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\[" '+codedir+' | grep "unserialize("', "OBJI" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\)("', "LFI" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
