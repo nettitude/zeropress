@@ -92,7 +92,7 @@ def analyse_all_plugins(plugindir):
 def analyse_code( codedir ):
  print "[.] Analysing code in " + codedir 
  code_search( 'grep -rHnI "[^\._a-z]\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
- code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\)\W" '+codedir+' | grep "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
+ code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
  code_search( 'grep -rHnI "\(curl_init\|fsockopen\|stream_context_create\)(" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
  code_search( 'grep -rHnI "CURLOPT_URL" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\[" '+codedir+' | grep "unserialize("', "OBJI" )
