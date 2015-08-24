@@ -148,7 +148,7 @@ parser = argparse.ArgumentParser(description="Grab the most popular wordpress pl
 parser.add_argument("-d", "--plugindir", help="Base URL for scraping plugins", default=plugindir)
 parser.add_argument("-o", "--outputdir", help="Output dir for saving downloaded files", default=outputdir)
 parser.add_argument("-l", "--logfile", help="Log file to write to", default=logfile)
-parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan", default=logfile)
+parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan")
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 args = parser.parse_args()
 
