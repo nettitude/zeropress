@@ -12,7 +12,7 @@ outputdir = "plugins"
 logfile = "logs/zeropress_"+str( datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S") )+".log"
 
 # Base URL of wordpress plugin downloads by version
-downloadbase = 'https://downloads.wordpress.org/plugin/'
+downloadbase = 'https://downloads.wordpress.org/'
 
 # Print an info message
 def pinfo(info):
@@ -68,8 +68,17 @@ def get_latest_plugin_version(pluginpage):
 def get_specific_plugin_version( shortname, version ):
   global downloadbase
   pinfo( "Getting " + shortname + " v" + version )
-  downloadurl = downloadbase + shortname + '.' + version + '.zip'
+  downloadurl = downloadbase + 'plugin/' + shortname + '.' + version + '.zip'
   path = args.outputdir + '/' + shortname + '/' + version 
+  if not download_zip( downloadurl, path ):
+
+    # Attempt to download at a theme URL instead
+    downloadurl = downloadbase + 'theme/' + shortname + '.' + version + '.zip'
+    path = args.outputdir.sub( "plugins", "themes" ) + '/' + shortname + '/' + version
+    download_zip( downloadurl, path )
+
+# Download and unpack a zip
+def download_zip( downloadurl, path ):
   filename = downloadurl.split('/')[-1]
   zippath = path + '/' + filename
   
@@ -81,6 +90,7 @@ def get_specific_plugin_version( shortname, version ):
     r = requests.get(downloadurl)
     if r.status_code != 200:
       print "\033[91m[.] Download failed for " + downloadurl + ": " + str( r.status_code ) + "\033[0m"
+      return False
     else:
       z = open( zippath, 'w' )
       z.write( r.content )
@@ -90,6 +100,7 @@ def get_specific_plugin_version( shortname, version ):
     print "[.] Zip already present in " + path
   
   analyse_code( path )
+  return True
 
 # Unpack a zip
 def unpack_zip( zippath ):
@@ -120,7 +131,7 @@ def analyse_code( codedir ):
  code_search( 'grep -rHnI "\(curl_init\|fsockopen\|stream_context_create\)(" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
  code_search( 'grep -rHnI "CURLOPT_URL" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\[" '+codedir+' | grep "unserialize("', "OBJI" )
- code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\)("', "LFI" )
+ code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\)("', "LFI" )
  code_search( 'grep -rHnI "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
 
 # Search using a given grep command, parse and log the response
