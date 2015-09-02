@@ -72,10 +72,20 @@ def get_specific_plugin_version( shortname, version ):
   path = args.outputdir + '/' + shortname + '/' + version 
   if not download_zip( downloadurl, path ):
 
-    # Attempt to download at a theme URL instead
-    downloadurl = downloadbase + 'theme/' + shortname + '.' + version + '.zip'
-    path = args.outputdir.sub( "plugins", "themes" ) + '/' + shortname + '/' + version
-    download_zip( downloadurl, path )
+    # Attempt download without version info
+    downloadurl = downloadbase + 'plugin/' + shortname + '.zip'
+    if not download_zip( downloadurl, path ):
+
+      # Attempt to download at a theme URL instead
+      downloadurl = downloadbase + 'theme/' + shortname + '.' + version + '.zip'
+      path = re.sub( "plugins", "themes", args.outputdir ) + '/' + shortname + '/' + version
+      if not download_zip( downloadurl, path ):
+        
+        # Attempt to download theme without version info
+        downloadurl = downloadbase + 'theme' + shortname + '.zip'
+        if not download_zip( downloadurl, path ):
+          print "\033[91m[.] Couldn't find any downloadable files for " + shortname + "\033[0m"
+
 
 # Download and unpack a zip
 def download_zip( downloadurl, path ):
@@ -90,6 +100,8 @@ def download_zip( downloadurl, path ):
     r = requests.get(downloadurl)
     if r.status_code != 200:
       print "\033[91m[.] Download failed for " + downloadurl + ": " + str( r.status_code ) + "\033[0m"
+      if os.path.exists( zippath ):
+        os.remove( zippath )
       return False
     else:
       z = open( zippath, 'w' )
@@ -127,6 +139,8 @@ def analyse_all_plugins(plugindir):
 def analyse_code( codedir ):
  print "[.] Analysing code in " + codedir 
  code_search( 'grep -rHnI "[^\._a-z]\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
+ code_search( 'grep -rHnI "\`[^\$]*\$[^\$]\+\`;\s*$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" )
+ code_search( 'grep -rHnI "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "MISC" )
  code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
  code_search( 'grep -rHnI "\(curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
  code_search( 'grep -rHnI "CURLOPT_URL" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
