@@ -44,7 +44,7 @@ def scrape_plugindir(plugindir):
     scrape_plugindir( nextpage )
   
   pinfo( "All done! Looks like we got all the plugin pages." )
-  sys.exit
+  os._exit(os.EX_OK)
 
 # Parse wpscan output and get all the mentioned plugins
 def parse_wpscan_output( wpscanfile ):
@@ -99,11 +99,12 @@ def download_zip( downloadurl, path ):
     pinfo( "Downloading " + downloadurl + " to " + path )
     r = requests.get(downloadurl)
     if r.status_code != 200:
-      print "\033[91m[.] Download failed for " + downloadurl + ": " + str( r.status_code ) + "\033[0m"
+      print "\033[91m[-] Download failed for " + downloadurl + ": " + str( r.status_code ) + "\033[0m"
       if os.path.exists( zippath ):
         os.remove( zippath )
       return False
     else:
+      pinfo( "Successfully downloaded " + downloadurl + " to " + path )
       z = open( zippath, 'w' )
       z.write( r.content )
       z.close()
@@ -175,6 +176,7 @@ parser.add_argument("-o", "--outputdir", help="Output dir for saving downloaded 
 parser.add_argument("-l", "--logfile", help="Log file to write to", default=logfile)
 parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan")
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
+parser.add_argument("-a", "--analyse", help="Just analyse a folder without doing anything else")
 args = parser.parse_args()
 
 pinfo( "Logging to " + args.logfile )
@@ -184,7 +186,9 @@ logdir = os.path.dirname(args.logfile)
 if not os.path.exists( logdir ):
   os.makedirs( logdir )
 
-if args.nodownload:
+if args.analyse:
+  analyse_code(args.analyse)
+elif args.nodownload:
   analyse_all_plugins(args.outputdir)
 elif args.wpscan:
   parse_wpscan_output( args.wpscan )
