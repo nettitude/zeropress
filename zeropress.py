@@ -157,10 +157,11 @@ def code_search( cmd, genre="" ):
     out = subprocess.check_output( cmd + " | sed 's/^/[!]["+genre+"] /'", shell=True )
   except subprocess.CalledProcessError as e:
     pass
-  if( out.strip() != '' ):
-    f = open( args.logfile, "a" )
-    f.write( out )
-    f.close()
+  if out.strip() != '': 
+    if not args.nologfile:
+      f = open( args.logfile, "a" )
+      f.write( out )
+      f.close()
     out = re.sub( "(\[!\]\[[A-Z]+\])(.+[0-9]+:)(.*)$", "\033[91m\g<1>\033[0m\g<2>\033[93m\g<3>\033[0m", out, 0, re.M )
     print out
   return out
@@ -174,13 +175,16 @@ parser = argparse.ArgumentParser(description="Grab the most popular wordpress pl
 parser.add_argument("-d", "--plugindir", help="Base URL for scraping plugins", default=plugindir)
 parser.add_argument("-o", "--outputdir", help="Output dir for saving downloaded files", default=outputdir)
 parser.add_argument("-l", "--logfile", help="Log file to write to", default=logfile)
+parser.add_argument("-L", "--nologfile", action="store_true", help="Disable writing a log file")
 parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan")
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 parser.add_argument("-a", "--analyse", help="Just analyse a folder without doing anything else")
 args = parser.parse_args()
 
-pinfo( "Logging to " + args.logfile )
-sys.exit
+if args.nologfile:
+  pinfo( "Not writing a log file" )
+else:
+  pinfo( "Logging to " + args.logfile )
 
 logdir = os.path.dirname(args.logfile)
 if not os.path.exists( logdir ):
