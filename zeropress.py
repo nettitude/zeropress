@@ -139,17 +139,54 @@ def analyse_all_plugins(plugindir):
 # Test code in the given dir with a number of easy to spot coding errors
 def analyse_code( codedir ):
  print "[.] Analysing code in " + codedir 
- code_search( 'grep -irHnI "[^\._a-z]\(eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
+
+ uservar = '\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\['
+
+ # RCE
+ code_search( 'grep -irHnI "[^\._a-z]\(create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
  code_search( 'grep -rHnI "\`[^\$]*\$[^\$]\+\`;\s*$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Shell exec via backticks
  code_search( 'grep -irHnI "[^\._a-z]preg_[a-z](\s*[\'\\"]/.*/[a-z]*e[a-z]*[\'\\"]" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions with /e
  code_search( 'grep -irHnI "[^\._a-z]preg_[a-z]([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions passing entire pattern
- code_search( 'grep -rHnI "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "MISC" )
- code_search( 'grep -rHnI "\$\(sql\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "\. *\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SQLI" )
- code_search( 'grep -rHnI "\(curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
- code_search( 'grep -rHnI "CURLOPT_URL" '+codedir+' | grep "\$_\(GET\|POST\|COOKIE\|REQUEST\)\["', "SSRF" )
- code_search( 'grep -rHnI "\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\[" '+codedir+' | grep "unserialize("', "OBJI" )
- code_search( 'grep -rHnI "\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\)("', "LFI" )
- code_search( 'grep -rHnI "\$_\(GET\|POST\|COOKIE\|REQUEST\)\[" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
+ 
+ # SQLI
+ code_search( 'grep -irHnI "\$\(stmt\|sqltext\|sql_string\|sqlauthority\|save_query\|querystring\|squerystring2\|squerystring\|where_str\|sdelete\|sinsert\|ssubquery\|selectwhere\|swhere\|supdate\|countsql\|squery\|sselect\|sq\|sql\|qry\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "'+uservar+'"', "SQLI" )
+ code_search( 'grep -irHnI "\w->\(sql\)\W" '+codedir+' | grep "\. *'+uservar+'"', "SQLI" )
+ code_search( 'grep -irHnI "(mysql_query\|mssql_query\|pg_query)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
+
+ # SSRF
+ code_search( 'grep -rHnI "\(curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "'+uservar+'"', "SSRF" )
+ code_search( 'grep -rHnI "CURLOPT_URL" '+codedir+' | grep "'+uservar+'"', "SSRF" )
+ 
+ # Object injection
+ code_search( 'grep -rHnI "'+uservar+'" '+codedir+' | grep "unserialize("', "OBJI" )
+ 
+ # Local file inclusion
+ code_search( 'grep -rHnI "\$\w\+" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\|show_source\|highlight_file\)("', "LFI" )
+ 
+ # XSS
+ code_search( 'grep -rHnI "'+uservar+'" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
+ 
+ # Code control
+ code_search( 'grep -rHnI "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
+ 
+ # phpinfo()
+ code_search( 'grep -rHnI "phpinfo(" '+codedir, "INFO" )
+
+ # Debug functionality
+ code_search( 'grep -rHnI "'+uservar+'[\'\"]\(test\|debug\)" '+codedir, "DBUG" )
+ 
+ # Ability to declare a variable into the current scope
+ code_search( 'grep -irHnI "parse_str(" ' + codedir+' | grep "'+uservar+'"', "VARS" )
+
+ # File upload handling
+ code_search( 'grep -rHnI "\$_FILES\[[\"\'][^\]][\"\']\]\[[\"\']name[\"\']\]" ' + codedir, "FILE" )
+
+ # Weak crypto
+ code_search( 'grep -rHnI "md5(" '+codedir, "CRYP" )
+ code_search( 'grep -rHnI "CRYPT_MD5" '+codedir, "CRYP" )
+ code_search( 'grep -rHnI "CRYPT_EXT_DES" '+codedir, "CRYP" )
+ code_search( 'grep -rHnI "CRYPT_STD_DES" '+codedir, "CRYP" )
+
 
 # Search using a given grep command, parse and log the response
 def code_search( cmd, genre="" ):
