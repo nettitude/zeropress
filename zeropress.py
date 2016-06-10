@@ -140,7 +140,8 @@ def analyse_all_plugins(plugindir):
 def analyse_code( codedir ):
  print "[.] Analysing code in " + codedir 
 
- uservar = '\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\)\['
+ uservar = '\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\|FILES\)\['
+ uservarany = uservar + '[\'\\"][^\'\\"]\+[\'\\"]\]'
 
  # RCE
  code_search( 'grep -irHnI "[^\._a-z]\(create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
@@ -173,13 +174,13 @@ def analyse_code( codedir ):
  code_search( 'grep -rHnI "phpinfo(" '+codedir, "INFO" )
 
  # Debug functionality
- code_search( 'grep -rHnI "'+uservar+'[\'\"]\(test\|debug\)" '+codedir, "DBUG" )
+ code_search( 'grep -rHnI "'+uservar+'[\'\\"]\(test\|debug\)" '+codedir, "DBUG" )
  
  # Ability to declare a variable into the current scope
- code_search( 'grep -irHnI "parse_str(" ' + codedir+' | grep "'+uservar+'"', "VARS" )
+ code_search( 'grep -irHnI "parse_str( *'+uservarany+' *)" ' + codedir, "VARS" )
 
  # File upload handling
- code_search( 'grep -rHnI "\$_FILES\[[\"\'][^\]][\"\']\]\[[\"\']name[\"\']\]" ' + codedir, "FILE" )
+ code_search( 'grep -rHnI "\$_FILES\[[\\"\'][^\\"\']\+[\\"\']\]\[[\\"\']name[\\"\']\]" ' + codedir, "FILE" )
 
  # Weak crypto
  code_search( 'grep -rHnI "md5(" '+codedir, "CRYP" )
@@ -191,6 +192,12 @@ def analyse_code( codedir ):
 # Search using a given grep command, parse and log the response
 def code_search( cmd, genre="" ):
   global args
+
+  # remove single line comments
+  cmd = cmd + ' | grep -v "^ *\/\/"'
+
+  if args.debug:
+    print "[D] " + cmd
   out = ''
   try:
     out = subprocess.check_output( cmd + " | sed 's/^/[!]["+genre+"] /'", shell=True )
@@ -218,6 +225,7 @@ parser.add_argument("-L", "--nologfile", action="store_true", help="Disable writ
 parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan")
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 parser.add_argument("-a", "--analyse", help="Just analyse a folder without doing anything else")
+parser.add_argument("--debug", help="Output search commands")
 args = parser.parse_args()
 
 if args.nologfile:
