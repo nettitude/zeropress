@@ -161,7 +161,7 @@ def analyse_code( codedir ):
  # Object injection
  code_search( 'grep -rHnI "'+uservar+'" '+codedir+' | grep "unserialize("', "OBJI" )
  
- # Local file inclusion
+ # Local file inclusin
  code_search( 'grep -rHnI "\$\w\+" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\|show_source\|highlight_file\)("', "LFI" )
  
  # XSS
@@ -169,7 +169,11 @@ def analyse_code( codedir ):
  
  # Code control
  code_search( 'grep -rHnI "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
+ code_search( 'grep -rHnI "\$\w\+(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
+ # code_search( 'grep-irHnI "function \+__\(construct\|destruct\|call\|callStatic\|get\|set\|isset\|unset\|sleep\|wakeup\|tostring\|invoke\|set_state\|clone\|debuginfo\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
+ code_search( 'grep -irHnI "function \+__\(destruct\|wakeup\|tostring\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
  
+
  # phpinfo()
  code_search( 'grep -rHnI "phpinfo(" '+codedir, "INFO" )
 
@@ -188,13 +192,16 @@ def analyse_code( codedir ):
  code_search( 'grep -rHnI "CRYPT_EXT_DES" '+codedir, "CRYP" )
  code_search( 'grep -rHnI "CRYPT_STD_DES" '+codedir, "CRYP" )
 
+ # Todo items
+ code_search( 'grep -rHnIi "\W\(TODO\|FIXME\|HACK\)\W" '+codedir+' | grep "\.php:"', "TODO", True )
 
 # Search using a given grep command, parse and log the response
-def code_search( cmd, genre="" ):
+def code_search( cmd, genre="", allowcomments=False ):
   global args
 
   # remove single line comments
-  cmd = cmd + ' | grep -v "^ *\/\/"'
+  if not allowcomments:
+    cmd = cmd + ' | grep -v "\.php:[0-9]\+: *\/\/"'
 
   if args.debug:
     print "[D] " + cmd
