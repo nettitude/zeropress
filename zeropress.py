@@ -238,7 +238,7 @@ parser.add_argument("-L", "--nologfile", action="store_true", help="Disable writ
 parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan")
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 parser.add_argument("-a", "--analyse", help="Just analyse a folder without doing anything else")
-parser.add_argument("-b", "--binaries", help="Search within binary files as if they were text")
+parser.add_argument("-b", "--binaries", action="store_true", help="Search within binary files as if they were text")
 parser.add_argument("--debug", help="Output search commands")
 args = parser.parse_args()
 
