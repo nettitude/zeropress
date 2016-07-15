@@ -146,11 +146,11 @@ def analyse_code( codedir ):
  else:
   binmode = 'I'
 
- uservar = '\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\|FILES\)\['
+ uservar = '\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\|FILES\|ENV\)\['
  uservarany = uservar + '[\'\\"][^\'\\"]\+[\'\\"]\]'
 
  # RCE
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
+ code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(assert\|create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
  code_search( 'grep -rHn'+binmode+' "\`[^\$]*\$[^\$]\+\`;\s*$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Shell exec via backticks
  code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z](\s*[\'\\"]/.*/[a-z]*e[a-z]*[\'\\"]" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions with /e
  code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions passing entire pattern
@@ -158,16 +158,17 @@ def analyse_code( codedir ):
  # SQLI
  code_search( 'grep -irHn'+binmode+' "\$\(stmt\|sqltext\|sql_string\|sqlauthority\|save_query\|querystring\|squerystring2\|squerystring\|where_str\|sdelete\|sinsert\|ssubquery\|selectwhere\|swhere\|supdate\|countsql\|squery\|sselect\|sq\|sql\|qry\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "'+uservar+'"', "SQLI" )
  code_search( 'grep -irHn'+binmode+' "\w->\(sql\)\W" '+codedir+' | grep "\. *'+uservar+'"', "SQLI" )
- code_search( 'grep -irHn'+binmode+' "(mysql_query\|mssql_query\|pg_query\|mysqli_query\|db_query)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "\(mysql_query\|mssql_query\|pg_query\|mysqli_query\|db_query\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "db->\(get_row\|get_results\|query\|get_var\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
 
  # SSRF
- code_search( 'grep -rHn'+binmode+' "\(curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "'+uservar+'"', "SSRF" )
+ code_search( 'grep -rHn'+binmode+' "\(curl_exec\|ftp_connect\|ftp_ssl_connect\|pfsockopen\|socket_bind\|socket_connect\|socket_listen\|socket_create_listen\|socket_accept\|socket_getpeername\|socket_send\|curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "'+uservar+'"', "SSRF" )
  code_search( 'grep -rHn'+binmode+' "CURLOPT_URL" '+codedir+' | grep "'+uservar+'"', "SSRF" )
  
  # Object injection
  code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "unserialize("', "OBJI" )
  
- # Local file inclusin
+ # Local file inclusion
  code_search( 'grep -rHn'+binmode+' "\$\w\+" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\|show_source\|highlight_file\)("', "LFI" )
  
  # XSS
@@ -176,9 +177,10 @@ def analyse_code( codedir ):
  # Code control
  code_search( 'grep -rHn'+binmode+' "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
  code_search( 'grep -rHn'+binmode+' "\$\w\+(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
- # code_search( 'grep-irHnI "function \+__\(construct\|destruct\|call\|callStatic\|get\|set\|isset\|unset\|sleep\|wakeup\|tostring\|invoke\|set_state\|clone\|debuginfo\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
  code_search( 'grep -irHn'+binmode+' "function \+__\(destruct\|wakeup\|tostring\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
  
+ # CRLF Injection
+ code_search( 'grep -irHn'+binmode+' "\Wheader(" '+codedir+' | grep "'+uservar+'"', "CRLF" )
 
  # phpinfo()
  code_search( 'grep -rHn'+binmode+' "phpinfo(" '+codedir, "INFO" )
