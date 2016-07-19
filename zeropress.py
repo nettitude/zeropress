@@ -22,7 +22,7 @@ def pinfo(info):
 def scrape_plugindir(plugindir):
   pinfo( "Getting " + plugindir )
   r = requests.get(plugindir)
-  soup = bs( r.text )
+  soup = bs( r.text, 'lxml' )
   links = soup.select("div.plugin-card a.plugin-icon")
   rs = soup.select("a.next.page-numbers")
   sys.exit
@@ -60,7 +60,7 @@ def get_latest_plugin_version(pluginpage):
   pinfo( "Getting plugin page: " + pluginpage )
   shortname = re.findall('([^\/]+)\/?$',pluginpage)[0]
   r = requests.get(pluginpage)
-  soup = bs( r.text )
+  soup = bs( r.text, 'lxml' )
   version = soup.find_all( 'meta', attrs={'itemprop': 'softwareVersion'})[0]['content']
   get_specific_plugin_version( shortname, version )
 
@@ -247,12 +247,18 @@ parser.add_argument("-o", "--outputdir", help="Output dir for saving downloaded 
 parser.add_argument("-l", "--logfile", help="Log file to write to", default=logfile)
 parser.add_argument("-L", "--nologfile", action="store_true", help="Disable writing a log file")
 parser.add_argument("-w", "--wpscan", help="Download all plugins mentioned in the supplied output file from wpscan")
+parser.add_argument("-p", "--plugins", action="store_true", help="WordPress plugins mode. Scrape and analyse all top plugins on wordpress.org/plugins")
 parser.add_argument("-n", "--nodownload", action="store_true", help="Don't do any scraping, just analyse any code already present")
 parser.add_argument("-a", "--analyse", help="Just analyse a folder without doing anything else")
 parser.add_argument("-b", "--binaries", action="store_true", help="Search within binary files as if they were text")
 parser.add_argument("-s", "--severity", choices=['1','2','3','4'], help="Report only issues of this severity level and up (1=critical, 4=medium)")
 parser.add_argument("--debug", help="Output search commands")
+if len( sys.argv)==1:
+  parser.print_help()
+  sys.exit(1)
 args = parser.parse_args()
+
+
 
 if args.nologfile:
   pinfo( "Not writing a log file" )
@@ -274,5 +280,9 @@ elif args.nodownload:
   analyse_all_plugins(args.outputdir)
 elif args.wpscan:
   parse_wpscan_output( args.wpscan )
-else:
+elif args.plugins:
   scrape_plugindir( args.plugindir )
+else:
+  print "Nothing to do!"
+  parser.print_help()
+
