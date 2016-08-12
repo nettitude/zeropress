@@ -179,6 +179,7 @@ def analyse_code( codedir ):
    
    # XSS
    code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
+   code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\)" '+codedir+' | grep "'+uservar+'"', "XSS" )
  
    # CRLF Injection
    code_search( 'grep -irHn'+binmode+' "\Wheader(" '+codedir+' | grep "'+uservar+'"', "CRLF" )
