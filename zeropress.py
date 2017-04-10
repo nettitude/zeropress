@@ -23,7 +23,7 @@ def scrape_plugindir(plugindir):
   pinfo( "Getting " + plugindir )
   r = requests.get(plugindir)
   soup = bs( r.text, 'lxml' )
-  links = soup.select("div.plugin-card a.plugin-icon")
+  links = soup.select("article h2.entry-title a")
   rs = soup.select("a.next.page-numbers")
   sys.exit
   if( len(rs) == 0 ):
@@ -159,7 +159,7 @@ def analyse_code( codedir ):
  code_search( 'grep -irHn'+binmode+' "\$\(stmt\|sqltext\|sql_string\|sqlauthority\|save_query\|querystring\|squerystring2\|squerystring\|where_str\|sdelete\|sinsert\|ssubquery\|selectwhere\|swhere\|supdate\|countsql\|squery\|sselect\|sq\|sql\|qry\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "'+uservar+'"', "SQLI" )
  code_search( 'grep -irHn'+binmode+' "\w->\(sql\)\W" '+codedir+' | grep "\. *'+uservar+'"', "SQLI" )
  code_search( 'grep -irHn'+binmode+' "\(mysql_query\|mssql_query\|pg_query\|mysqli_query\|db_query\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
- code_search( 'grep -irHn'+binmode+' "db->\(get_row\|get_results\|query\|get_var\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "db->\(get_row\|get_results\|query\|get_var\|get_col\|replace\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
 
  # High severity issues
  if args.severity >= 2:
