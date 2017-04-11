@@ -15,12 +15,15 @@ logfile = "logs/zeropress_"+str( datetime.datetime.now().strftime("%Y-%m-%d_%H%M
 downloadbase = 'https://downloads.wordpress.org/'
 
 # Print an info message
-def pinfo(info):
-  print "\033[92m[I] " + info + "\033[0m"
+def pinfo(info,bold=False):
+  info = "\033[92m[I] " + info + "\033[0m"
+  if bold:
+    info = '\033[1m' + info
+  print info
 
 # Loop over all plugins on the plugin directory site
 def scrape_plugindir(plugindir):
-  pinfo( "Getting " + plugindir )
+  pinfo( "Getting " + plugindir, True )
   r = requests.get(plugindir)
   soup = bs( r.text, 'lxml' )
   links = soup.select("article h2.entry-title a")
