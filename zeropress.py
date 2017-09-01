@@ -149,7 +149,7 @@ def analyse_code( codedir ):
  else:
   binmode = 'I'
 
- uservar = '\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\|FILES\|ENV\)\['
+ uservar = '\(\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\|FILES\|ENV\)\[\|php://input\|\$HTTP_RAW_POST_DATA\)'
  uservarany = uservar + '[\'\\"][^\'\\"]\+[\'\\"]\]'
 
  # RCE
@@ -182,7 +182,8 @@ def analyse_code( codedir ):
    
    # XSS
    code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
-   code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\)" '+codedir+' | grep "'+uservar+'"', "XSS" )
+  code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\|php://output\)" '+codedir+' | grep "'+uservar+'"', "XSS" )
+ 
  
    # CRLF Injection
    code_search( 'grep -irHn'+binmode+' "\Wheader(" '+codedir+' | grep "'+uservar+'"', "CRLF" )
@@ -289,4 +290,3 @@ elif args.plugins:
 else:
   print "Nothing to do!"
   parser.print_help()
-
