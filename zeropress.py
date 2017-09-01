@@ -155,8 +155,8 @@ def analyse_code( codedir ):
  # RCE
  code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(assert\|create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
  code_search( 'grep -rHn'+binmode+' "\`[^\$]*\$[^\$]\+\`;\s*$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Shell exec via backticks
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z](\s*[\'\\"]/.*/[a-z]*e[a-z]*[\'\\"]" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions with /e
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions passing entire pattern
+ code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]\+(\s*[\'\\"]/.*/[a-z]*e[a-z]*[\'\\"]" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions with /e
+ code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]\+([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions passing entire pattern
  
  # SQLI
  code_search( 'grep -irHn'+binmode+' "\$\(stmt\|sqltext\|sql_string\|sqlauthority\|save_query\|querystring\|squerystring2\|squerystring\|where_str\|sdelete\|sinsert\|ssubquery\|selectwhere\|swhere\|supdate\|countsql\|squery\|sselect\|sq\|sql\|qry\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "'+uservar+'"', "SQLI" )
