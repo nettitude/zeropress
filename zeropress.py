@@ -182,8 +182,7 @@ def analyse_code( codedir ):
    
    # XSS
    code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
-  code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\|php://output\)" '+codedir+' | grep "'+uservar+'"', "XSS" )
- 
+   code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\|php://output\)" '+codedir+' | grep "'+uservar+'"', "XSS" )
  
    # CRLF Injection
    code_search( 'grep -irHn'+binmode+' "\Wheader(" '+codedir+' | grep "'+uservar+'"', "CRLF" )
