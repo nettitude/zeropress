@@ -169,7 +169,10 @@ def analyse_code( codedir ):
  
    # Object injection
    code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "unserialize("', "OBJI" )
-   
+ 
+   # PHAR deserialisation RCE https://blog.secarma.co.uk/labs/near-phar-dangerous-unserialization-wherever-you-are
+   code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(file_exists\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "PHAR" )
+
    # File upload handling
    code_search( 'grep -rHn'+binmode+' "\$_FILES\[[\\"\'][^\\"\']\+[\\"\']\]\[[\\"\']name[\\"\']\]" ' + codedir, "FILE" )
    
