@@ -1,7 +1,8 @@
 # zeropress
-A dumb script for finding dumb coding errors in WordPress plugins
 
-Essentially this is a list of grep statements that I frequently use for code reviewing PHP applications, wrapped in a bunch of python. The main use case for this script is to find vulnerable WordPress plugins, and there is a mode which will automatically scrape and download from the official popular plugins site, scanning each plugin that it downloads. You can also just point the script at any directory and it will simply scan that directory.
+A dumb script for finding dumb coding errors and web shells in PHP.
+
+Essentially this is a list of grep statements that I frequently use for code reviewing PHP applications, wrapped in a bunch of python. The main use case for this script is to find vulnerable WordPress plugins, and there is a mode which will automatically scrape and download from the official popular plugins site, scanning each plugin that it downloads. You can also just point the script at any directory and it will simply scan that directory, which works well for a first pass in a code review or for hunting web shells in incident response.
 
 This is not a code analyser. It doesn't parse any PHP and will produce a lot of false positives. This is intended just to find easy to spot errors which you can then investigate further.
 
