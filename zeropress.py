@@ -232,7 +232,7 @@ def code_search( cmd, genre="", allowcomments=False ):
     print("[D] " + cmd)
   out = ''
   try:
-    out = subprocess.check_output( cmd + " | sed 's/^/[!]["+genre+"] /'", shell=True )
+    out = subprocess.check_output( cmd + " | sed 's/^/[!]["+genre+"] /'", shell=True ).decode('utf-8')
   except subprocess.CalledProcessError as e:
     pass
   if out.strip() != '': 
