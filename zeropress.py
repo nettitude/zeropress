@@ -19,7 +19,7 @@ def pinfo(info,bold=False):
   info = "\033[92m[I] " + info + "\033[0m"
   if bold:
     info = '\033[1m' + info
-  print info
+  print(info)
 
 # Loop over all plugins on the plugin directory site
 def scrape_plugindir(plugindir):
@@ -87,7 +87,7 @@ def get_specific_plugin_version( shortname, version ):
         # Attempt to download theme without version info
         downloadurl = downloadbase + 'theme' + shortname + '.zip'
         if not download_zip( downloadurl, path ):
-          print "\033[91m[.] Couldn't find any downloadable files for " + shortname + "\033[0m"
+          print("\033[91m[.] Couldn't find any downloadable files for " + shortname + "\033[0m")
 
 
 # Download and unpack a zip
@@ -102,7 +102,7 @@ def download_zip( downloadurl, path ):
     pinfo( "Downloading " + downloadurl + " to " + path )
     r = requests.get(downloadurl)
     if r.status_code != 200:
-      print "\033[91m[-] Download failed for " + downloadurl + ": " + str( r.status_code ) + "\033[0m"
+      print("\033[91m[-] Download failed for " + downloadurl + ": " + str( r.status_code ) + "\033[0m")
       if os.path.exists( zippath ):
         os.remove( zippath )
       return False
@@ -113,7 +113,7 @@ def download_zip( downloadurl, path ):
       z.close()
       unpack_zip( zippath )
   else:
-    print "[.] Zip already present in " + path
+    print("[.] Zip already present in " + path)
   
   analyse_code( path )
   return True
@@ -121,12 +121,12 @@ def download_zip( downloadurl, path ):
 # Unpack a zip
 def unpack_zip( zippath ):
   dest = '/'.join(zippath.split('/')[:-1])
-  print "[.] Unpacking " + zippath
+  print("[.] Unpacking " + zippath)
   subprocess.check_output(['unzip', '-o', '-d', dest, zippath])
 
 # Analyse newest version of all plugins in a plugin dir
 def analyse_all_plugins(plugindir):
-  print "[.] Analysing newest version of all plugins currently in " + plugindir
+  print("[.] Analysing newest version of all plugins currently in " + plugindir)
   # List dirs in plugindir
   plugindirs = [ d for d in listdir(plugindir) if isdir(join(plugindir,d)) ]
   for d in plugindirs:
@@ -142,7 +142,7 @@ def analyse_all_plugins(plugindir):
 # Test code in the given dir with a number of easy to spot coding errors
 def analyse_code( codedir ):
  global args
- print "[.] Analysing code in " + codedir 
+ print("[.] Analysing code in " + codedir) 
 
  if args.binaries:
   binmode = 'a'
@@ -229,7 +229,7 @@ def code_search( cmd, genre="", allowcomments=False ):
     cmd = cmd + ' | grep -v "\.php:[0-9]\+: *\/\/"'
 
   if args.debug:
-    print "[D] " + cmd
+    print("[D] " + cmd)
   out = ''
   try:
     out = subprocess.check_output( cmd + " | sed 's/^/[!]["+genre+"] /'", shell=True )
@@ -241,7 +241,7 @@ def code_search( cmd, genre="", allowcomments=False ):
       f.write( out )
       f.close()
     out = re.sub( "(\[!\]\[[A-Z]+\])(.+[0-9]+:)(.*)$", "\033[91m\g<1>\033[0m\g<2>\033[93m\g<3>\033[0m", out, 0, re.M )
-    print out
+    print(out)
   return out
   
 #
@@ -291,5 +291,5 @@ elif args.wpscan:
 elif args.plugins:
   scrape_plugindir( args.plugindir )
 else:
-  print "Nothing to do!"
+  print("Nothing to do!")
   parser.print_help()
