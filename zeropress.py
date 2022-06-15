@@ -151,19 +151,20 @@ def analyse_code( codedir ):
 
  uservar = '\(\$_\(GET\|POST\|COOKIE\|REQUEST\|SERVER\|FILES\|ENV\)\[\|php://input\|\$HTTP_RAW_POST_DATA\)'
  uservarany = uservar + '[\'\\"][^\'\\"]\+[\'\\"]\]'
+ phpfilter = '| grep "\.php:"'
 
  # RCE
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(assert\|create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE Functions
- code_search( 'grep -rHn'+binmode+' "\`[^\$]*\$[^\$]\+\`;\s*$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Shell exec via backticks
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]\+(\s*[\'\\"]/.*/[a-z]*e[a-z]*[\'\\"]" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions with /e
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]\+([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions passing entire pattern
- code_search( 'grep -irHn'+binmode+' "[^\._a-z]\$[^-() ;@]\+([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE by passing a variable as a function name
+ code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(assert\|create_function\|assert\|eval\|passthru\|system\|exec\|shell_exec\|pcntl_exec\|popen\|proc_open\)([^\$]*\$[^\$]*)" '+codedir+phpfilter, "RCE" ) # RCE Functions
+ code_search( 'grep -rHn'+binmode+' "\`[^\$]*\$[^\$]\+\`;\s*$" '+codedir+phpfilter, "RCE" ) # Shell exec via backticks
+ #code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]\+(\s*[\'\\"]/.*/[a-z]*e[a-z]*[\'\\"]" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions with /e
+ #code_search( 'grep -irHn'+binmode+' "[^\._a-z]preg_[a-z]\+([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # Code exec via preg functions passing entire pattern
+ # code_search( 'grep -irHn'+binmode+' "[^\._a-z]\$[^-() ;@]\+([^,]*\$" '+codedir+'| grep -v "\.\(js\|css\|js\.php\):"', "RCE" ) # RCE by passing a variable as a function name
  
  # SQLI
- code_search( 'grep -irHn'+binmode+' "\$\(stmt\|sqltext\|sql_string\|sqlauthority\|save_query\|querystring\|squerystring2\|squerystring\|where_str\|sdelete\|sinsert\|ssubquery\|selectwhere\|swhere\|supdate\|countsql\|squery\|sselect\|sq\|sql\|qry\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "'+uservar+'"', "SQLI" )
- code_search( 'grep -irHn'+binmode+' "\w->\(sql\)\W" '+codedir+' | grep "\. *'+uservar+'"', "SQLI" )
- code_search( 'grep -irHn'+binmode+' "\(mysql_query\|mssql_query\|pg_query\|mysqli_query\|db_query\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
- code_search( 'grep -irHn'+binmode+' "db->\(get_row\|get_results\|query\|get_var\|get_col\|replace\)" ' + codedir+' | grep "'+uservar+'"', "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "\$\(stmt\|sqltext\|sql_string\|sqlauthority\|save_query\|querystring\|squerystring2\|squerystring\|where_str\|sdelete\|sinsert\|ssubquery\|selectwhere\|swhere\|supdate\|countsql\|squery\|sselect\|sq\|sql\|qry\|query\|where\|select\|order\|limit\)\W" '+codedir+' | grep "'+uservar+'"'+phpfilter, "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "\w->\(sql\)\W" '+codedir+' | grep "\. *'+uservar+'"'+phpfilter, "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "\(mysql_query\|mssql_query\|pg_query\|mysqli_query\|db_query\)" ' + codedir+' | grep "'+uservar+'"'+phpfilter, "SQLI" )
+ code_search( 'grep -irHn'+binmode+' "db->\(get_row\|get_results\|query\|get_var\|get_col\|replace\)" ' + codedir+' | grep "'+uservar+'"'+phpfilter, "SQLI" )
 
  # High severity issues
  if args.severity >= 2:
@@ -172,53 +173,56 @@ def analyse_code( codedir ):
    code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "unserialize("', "OBJI" )
  
    # PHAR deserialisation RCE https://blog.secarma.co.uk/labs/near-phar-dangerous-unserialization-wherever-you-are
-   code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(file_exists\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "PHAR" )
+   code_search( 'grep -irHn'+binmode+' "[^\._a-z]\(file_exists\)([^\$]*\$[^\$]*)" '+codedir+phpfilter, "PHAR" )
 
    # File upload handling
-   code_search( 'grep -rHn'+binmode+' "\$_FILES\[[\\"\'][^\\"\']\+[\\"\']\]\[[\\"\']name[\\"\']\]" ' + codedir, "FILE" )
+   code_search( 'grep -rHn'+binmode+' "\$_FILES\[[\\"\'][^\\"\']\+[\\"\']\]\[[\\"\']name[\\"\']\]" ' + codedir+phpfilter, "FILE" )
    
    # SSRF
-   code_search( 'grep -rHn'+binmode+' "\(curl_exec\|ftp_connect\|ftp_ssl_connect\|pfsockopen\|socket_bind\|socket_connect\|socket_listen\|socket_create_listen\|socket_accept\|socket_getpeername\|socket_send\|curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "'+uservar+'"', "SSRF" )
-   code_search( 'grep -rHn'+binmode+' "CURLOPT_URL" '+codedir+' | grep "'+uservar+'"', "SSRF" )
+   code_search( 'grep -rHn'+binmode+' "\(curl_exec\|ftp_connect\|ftp_ssl_connect\|pfsockopen\|socket_bind\|socket_connect\|socket_listen\|socket_create_listen\|socket_accept\|socket_getpeername\|socket_send\|curl_init\|fsockopen\|stream_context_create\|get_headers\)(" '+codedir+' | grep "'+uservar+'"'+phpfilter, "SSRF" )
+   code_search( 'grep -rHn'+binmode+' "CURLOPT_URL" '+codedir+' | grep "'+uservar+'"'+phpfilter, "SSRF" )
    
    # Local file inclusion
-   code_search( 'grep -rHn'+binmode+' "\$\w\+" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\|show_source\|highlight_file\)("', "LFI" )
+   code_search( 'grep -rHn'+binmode+' "\$\w\+" '+codedir+' | grep "\(file_get_contents\|fopen\|SplFileObject\|include\|require\|include_once\|require_once\|show_source\|highlight_file\)("'+phpfilter, "LFI" )
    
    # XSS
-   code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "\(<\w\|\w>\)"', "XSS" )
-   code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\|php://output\)" '+codedir+' | grep "'+uservar+'"', "XSS" )
+   code_search( 'grep -rHn'+binmode+' "'+uservar+'" '+codedir+' | grep "\(<\w\|\w>\)"'+phpfilter, "XSS" )
+   code_search( 'grep -rHn'+binmode+' "^\s*\(echo\|print\|php://output\)" '+codedir+' | grep "'+uservar+'"'+phpfilter, "XSS" )
  
    # CRLF Injection
-   code_search( 'grep -irHn'+binmode+' "\Wheader(" '+codedir+' | grep "'+uservar+'"', "CRLF" )
+   code_search( 'grep -irHn'+binmode+' "\Wheader(" '+codedir+' | grep "'+uservar+'"'+phpfilter, "CRLF" )
 
  # Medium severity issues
  if args.severity >= 3:
  
    # Code control
-   code_search( 'grep -rHn'+binmode+' "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
-   code_search( 'grep -rHn'+binmode+' "\$\w\+(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
-   code_search( 'grep -irHn'+binmode+' "function \+__\(destruct\|wakeup\|tostring\)(" '+codedir+' | grep -v "\.\(js\|css\|js\.php\):"', "CTRL" )
+   code_search( 'grep -rHn'+binmode+' "[^\._a-z]\(call_user_func\|call_user_func_array\)([^\$]*\$[^\$]*)" '+codedir+phpfilter, "CTRL" )
+   code_search( 'grep -rHn'+binmode+' "\$\w\+(" '+codedir+phpfilter, "CTRL" )
+   code_search( 'grep -irHn'+binmode+' "function \+__\(destruct\|wakeup\|tostring\)(" '+codedir+phpfilter, "CTRL" )
    
    # Debug functionality
-   code_search( 'grep -rHn'+binmode+' "'+uservar+'[\'\\"]\(test\|debug\)" '+codedir, "DBUG" )
+   code_search( 'grep -riHn'+binmode+' "'+uservar+'[\'\\"]\(test\|debug\)" '+codedir+phpfilter, "DBUG" )
    
    # Ability to declare a variable into the current scope
-   code_search( 'grep -irHn'+binmode+' "parse_str( *'+uservarany+' *)" ' + codedir, "VARS" )
+   code_search( 'grep -irHn'+binmode+' "parse_str( *'+uservarany+' *)" ' + codedir+phpfilter, "VARS" )
 
    # Weak crypto
-   code_search( 'grep -rHn'+binmode+' "md5(" '+codedir, "CRYP" )
-   code_search( 'grep -rHn'+binmode+' "CRYPT_MD5" '+codedir, "CRYP" )
-   code_search( 'grep -rHn'+binmode+' "CRYPT_EXT_DES" '+codedir, "CRYP" )
-   code_search( 'grep -rHn'+binmode+' "CRYPT_STD_DES" '+codedir, "CRYP" )
+   code_search( 'grep -rHn'+binmode+' "md5(" '+codedir+phpfilter, "CRYP" )
+   code_search( 'grep -rHn'+binmode+' "CRYPT_MD5" '+codedir+phpfilter, "CRYP" )
+   code_search( 'grep -rHn'+binmode+' "CRYPT_EXT_DES" '+codedir+phpfilter, "CRYP" )
+   code_search( 'grep -rHn'+binmode+' "CRYPT_STD_DES" '+codedir+phpfilter, "CRYP" )
 
  # Low severity issues
  if args.severity == 4:
    
    # phpinfo()
-   code_search( 'grep -rHn'+binmode+' "phpinfo(" '+codedir, "INFO" )
+   code_search( 'grep -rHn'+binmode+' "phpinfo(" '+codedir+phpfilter, "INFO" )
 
    # Todo items
-   code_search( 'grep -rHni'+binmode+' "\W\(TODO\|FIXME\|HACK\)\W" '+codedir+' | grep "\.php:"', "TODO", True )
+   code_search( 'grep -rHni'+binmode+' "\W\(TODO\|FIXME\|HACK\)\W" '+codedir+phpfilter, "TODO", True )
+
+   # Where people have purposefully turned off Code Sniffer
+   code_search( 'grep -rHni'+binmode+' "phpcs:ignore" '+codedir+phpfilter, "IGNR", True )
 
 # Search using a given grep command, parse and log the response
 def code_search( cmd, genre="", allowcomments=False ):
